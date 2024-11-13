@@ -16,7 +16,7 @@ suppressPackageStartupMessages({
 dars_all <- read.csv('source_data/TableS2_DAR_between_AD_HC.txt',sep = '\t')
 degs_all <- read.csv('source_data/TableS3_DEG_between_AD_HC.txt', sep = '\t')
 
-# explore annotating DARs a few different ways ----------------------------
+# make Granges objects ----------------------------
 
 # turn DARs into Granges object for subsequent annotation steps 
 
@@ -31,7 +31,6 @@ dars_gr <- GRanges(seqnames = dars_chr,
 dars_gr$cell_type <- dars_all$cell_type
 
 
-
 # turn DEGs into Granges object for subsequent annotation steps 
 
 # in data as provided, DEGs are just gene_name, but no genomic coordinates
@@ -40,9 +39,10 @@ dars_gr$cell_type <- dars_all$cell_type
 # Connect to the Ensembl database
 ensembl <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl")
 
-# Create a vector of feature (gene) names that you want to query
+# pull out hgnc_symbols we want to query
 features <- degs_all$feature
 
+# perform query
 gene_coordinates <- getBM(
   attributes = c("hgnc_symbol", "chromosome_name", "start_position", "end_position"),
   filters = "hgnc_symbol",
@@ -50,18 +50,19 @@ gene_coordinates <- getBM(
   mart = ensembl
 )
 
+# many random chrs, let's keep only coordinates that are one standard chrs
+standard_chromosomes <- as.character(c(1:22, "X", "Y"))
+gene_coordinates_standard <- gene_coordinates[gene_coordinates$chromosome_name %in% standard_chromosomes, ] %>% distinct()
 
-ah <- AnnotationHub()
-orgs <- subset(ah, ah$rdataclass == "OrgDb")
-orgdb <- query(orgs, "Homo sapiens")[[1]]
+# combine as downloaded degs data with the genomic coordinates
+degs_all_coords <- left_join(degs_all, gene_coordinates_standard, by = c("feature" = "hgnc_symbol"))
 
+# check for NAs, cannot have NAs in the df that is used to make GRanges
+sum(is.na(degs_all_coords$start_position))
 
-gene_info <- as.data.frame(select(orgdb, keys = keys(orgdb), columns = c("GENENAME", "GENETYPE", "ENSEMBL")))
+# make GRanges object with differentially expressed genes
+degs_gr <- GRanges(seqnames = degs_all_coords$chromosome_name,
+                   ranges = IRanges(start = degs_all_coords$start_position, end = degs_all_coords$end_position),
+                   strand = "*")
 
-protein_coding_genes <- gene_info %>%
-  filter(GENETYPE == "protein_coding")
-
-peak_annotation_coding <- annotatePeak(dars_gr, 
-                                       TxDb = protein_coding_genes,
-                                       level = 'gene')
 
