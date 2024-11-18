@@ -44,7 +44,6 @@ plts_summary <- plot_grid(dars_summary, degs_plt, ncol = 1)
 
 #pca to see any clustering with cell type or peak type
 
-library(ggplot2)
 pca <- prcomp(dars_all[, c("avg_log2FC", "pct.1", "pct.2")], scale. = TRUE)
 pca_df <- data.frame(pca$x)
 pca_df$cell_type <- dars_all$cell_type

@@ -55,7 +55,7 @@ standard_chromosomes <- as.character(c(1:22, "X", "Y"))
 gene_coordinates_standard <- gene_coordinates[gene_coordinates$chromosome_name %in% standard_chromosomes, ] %>% distinct()
 
 # combine as downloaded degs data with the genomic coordinates
-degs_all_coords <- left_join(degs_all, gene_coordinates_standard, by = c("feature" = "hgnc_symbol"))
+degs_all_coords <- inner_join(degs_all, gene_coordinates_standard, by = c("feature" = "hgnc_symbol"))
 
 # check for NAs, cannot have NAs in the df that is used to make GRanges
 sum(is.na(degs_all_coords$start_position))
