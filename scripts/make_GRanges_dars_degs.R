@@ -7,8 +7,8 @@ suppressPackageStartupMessages({
   library(cowplot)
   library(stringr)
   library(GenomicFeatures)
-  library(AnnotationHub)
-  library(ChIPseeker)
+  library(ensembldb)
+  library(EnsDb.Hsapiens.v86) 
 })
 
 
@@ -16,7 +16,7 @@ suppressPackageStartupMessages({
 dars_all <- read.csv('source_data/TableS2_DAR_between_AD_HC.txt',sep = '\t')
 degs_all <- read.csv('source_data/TableS3_DEG_between_AD_HC.txt', sep = '\t')
 
-# make Granges objects ----------------------------
+# make DARs Granges object ----------------------------
 
 # turn DARs into Granges object for subsequent annotation steps 
 
@@ -31,38 +31,36 @@ dars_gr <- GRanges(seqnames = dars_chr,
 dars_gr$cell_type <- dars_all$cell_type
 
 
-# turn DEGs into Granges object for subsequent annotation steps 
+
+# make DEGs Granges object ------------------------------------------------
 
 # in data as provided, DEGs are just gene_name, but no genomic coordinates
 # annotate with genomic coordinates
 
-# Connect to the Ensembl database
-ensembl <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl")
+# Load EnsDb and filter gene coordinates
+edb <- EnsDb.Hsapiens.v86
+g <- genes(edb)
+g <- keepStandardChromosomes(g, pruning.mode = 'coarse') # standard chromosomes
 
-# pull out hgnc_symbols we want to query
-features <- degs_all$feature
+# Filter the genes that match with DEGs from downloaded data
+degs_coords <- g[g$symbol %in% features] %>% as.data.frame()
 
-# perform query
-gene_coordinates <- getBM(
-  attributes = c("hgnc_symbol", "chromosome_name", "start_position", "end_position"),
-  filters = "hgnc_symbol",
-  values = features,
-  mart = ensembl
+# Merge DEGs data with gene coordinates so we can have coordinates for our genes
+degs_coords_celltype <- merge(degs_all, degs_coords, by.x = 'feature', by.y = 'symbol')
+
+# Filter mapped coordinates by checking that start and end values are not NA
+degs_coords_mapped <- degs_coords_celltype[!is.na(degs_coords_celltype$start) & !is.na(degs_coords_celltype$end), ]
+
+# Create GRanges object
+degs_gr <- GRanges(
+  seqnames = paste('chr', degs_coords_mapped$seqnames),  # correct format for seqnames
+  ranges = IRanges(start = degs_coords_mapped$start, end = degs_coords_mapped$end),
+  strand = "*"  # placeholder bc strand not relevant 
 )
 
-# many random chrs, let's keep only coordinates that are one standard chrs
-standard_chromosomes <- as.character(c(1:22, "X", "Y"))
-gene_coordinates_standard <- gene_coordinates[gene_coordinates$chromosome_name %in% standard_chromosomes, ] %>% distinct()
-
-# combine as downloaded degs data with the genomic coordinates
-degs_all_coords <- inner_join(degs_all, gene_coordinates_standard, by = c("feature" = "hgnc_symbol"))
-
-# check for NAs, cannot have NAs in the df that is used to make GRanges
-sum(is.na(degs_all_coords$start_position))
-
-# make GRanges object with differentially expressed genes
-degs_gr <- GRanges(seqnames = degs_all_coords$chromosome_name,
-                   ranges = IRanges(start = degs_all_coords$start_position, end = degs_all_coords$end_position),
-                   strand = "*")
-
+# Add metadata from downloaded data 
+degs_gr$cell_type <- degs_coords_celltype$cell_type
+degs_gr$gene_name <- degs_coords_celltype$feature
+degs_gr$gene_biotype <- degs_coords_celltype$gene_biotype
+degs_gr$DAR_deg_overlap <- degs_coords_celltype$DAR_DEG_overlap
 
