@@ -30,12 +30,12 @@ dars_gr <- GRanges(seqnames = dars_chr,
                    strand = "*")
 dars_gr$cell_type <- dars_all$cell_type
 
-
-
 # make DEGs Granges object ------------------------------------------------
 
 # in data as provided, DEGs are just gene_name, but no genomic coordinates
 # annotate with genomic coordinates
+
+features <- degs_all$feature
 
 # Load EnsDb and filter gene coordinates
 edb <- EnsDb.Hsapiens.v86
@@ -53,7 +53,7 @@ degs_coords_mapped <- degs_coords_celltype[!is.na(degs_coords_celltype$start) & 
 
 # Create GRanges object
 degs_gr <- GRanges(
-  seqnames = paste('chr', degs_coords_mapped$seqnames),  # correct format for seqnames
+  seqnames = paste0('chr', degs_coords_mapped$seqnames),  # correct format for seqnames
   ranges = IRanges(start = degs_coords_mapped$start, end = degs_coords_mapped$end),
   strand = "*"  # placeholder bc strand not relevant 
 )
