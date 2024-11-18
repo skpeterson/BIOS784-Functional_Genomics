@@ -42,6 +42,23 @@ degs_all %>% group_by(cell_type,DAR_DEG_overlap) %>% tally()
 dars_summary <- plot_grid(dars_plt, peaktype_plt, ncol = 2)
 plts_summary <- plot_grid(dars_summary, degs_plt, ncol = 1)
 
+#pca to see any clustering with cell type or peak type
+
+library(ggplot2)
+pca <- prcomp(dars_all[, c("avg_log2FC", "pct.1", "pct.2")], scale. = TRUE)
+pca_df <- data.frame(pca$x)
+pca_df$cell_type <- dars_all$cell_type
+pca_df$peak_type <- dars_all$peakType
+
+ggplot(pca_df, aes(x = PC1, y = PC2, color = cell_type)) +
+  geom_jitter() +
+  labs(title = "PCA Plot by Cell Type") #possibly some clustering
+#can compare to the log2fc chromatin accessibility based on Cell type violin plot
+
+ggplot(pca_df, aes(x = PC1, y = PC2, color = peak_type)) +
+  geom_point() +
+  labs(title = "PCA Plot by Peak Type") #no clustering
+
 
 
 
