@@ -29,6 +29,7 @@ dars_gr <- GRanges(seqnames = dars_chr,
                    ranges = IRanges(start = dars_start, end = dars_end),
                    strand = "*")
 dars_gr$cell_type <- dars_all$cell_type
+dars_gr$logFC_dar <- dars_all$avg_log2FC
 
 # make DEGs Granges object ------------------------------------------------
 
@@ -63,4 +64,5 @@ degs_gr$cell_type <- degs_coords_celltype$cell_type
 degs_gr$gene_name <- degs_coords_celltype$feature
 degs_gr$gene_biotype <- degs_coords_celltype$gene_biotype
 degs_gr$DAR_deg_overlap <- degs_coords_celltype$DAR_DEG_overlap
+degs_gr$log2FC_deg <- degs_coords_celltype$avg_log2FC
 
