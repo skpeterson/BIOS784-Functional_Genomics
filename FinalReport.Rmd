@@ -1,0 +1,17 @@
+---
+title: "Untitled"
+author: "Annika Cleven"
+date: "2024-11-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Project Motivation
+
+Our project is motivated by "Epigenetic dysregulation in Alzheimer’s disease peripheral immunity" (2024, Ramakrishnan).  In this study investigates the transcriptional changes in the peripheral immune system in Alzheimer's disease, using advanced single-cell sequencing techniques, such as ATAC-seq and RNA sequencing. 
+
+In the investigation they have a list of the differentially expressed genes (DEGs) and include the sites the DEGs are at, their associated log 2 fold change, and whether there is overlap between these DEGs and a differentially accessible region (DAR). While they have provided information in whether there is overlap between the DAR and DEGs, they do not give any further information. It could be potentially biologically interesting to know the distance between the DEG and the nearest gene in the DAR, as well as the direction. A primary goal of our investigation is to verify the studies binary overlap results, as well as quantify the distance and direction of the nearest gene that the overlap occurs at.  In addition, they have annotated, given in a very elementary manner, the type of cell that the DEG is part of, as well as the type of gene that the nearest gene is at. Then we can look for trends amongst the types of cells and genes related to the distance from the nearest gene. 
+
