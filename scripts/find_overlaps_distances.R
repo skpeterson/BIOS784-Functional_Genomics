@@ -26,6 +26,18 @@ glimpse(results)
 
 # Merge metadata with original GRanges
 
+library(plyranges)
+
+
+# Find the nearest DEGs to DARs and calculate the distances
+nearest_degs <- dars_gr %>%
+  join_nearest(degs_gr)
+dist_to_nearest <- distanceToNearest(nearest_degs, degs_gr)
+distances <- mcols(dist_to_nearest)$distance
+nearest_degs <- nearest_degs %>%
+  mutate(distance = distances)
+
+
 # Extract the distances (distances between DARs and nearest DEGs)
 distances <- mcols(dist_to_nearest)$distance
 
@@ -38,8 +50,8 @@ nearest_degs_metadata <- degs_gr[nearest_deg_indices]@elementMetadata
 # Create a data frame to combine DARs with distances and DEGs metadata
 dars_with_distances_and_metadata <- cbind(as.data.frame(dars_gr), distance = distances, nearest_degs_metadata)
 
-colnames(dars_with_distances_and_metadata) <- c("seqnames", "start", "end", "width", "strand", "cell_type_dar", "distance", "cell_type_deg",
-                                                "gene_name", "gene_biotype", "DAR_deg_overlap")
+colnames(dars_with_distances_and_metadata) <- c("seqnames", "start", "end", "width", "strand", "cell_type_dar", "logFC_dar","distance", "cell_type_deg",
+                                                "gene_name", "gene_biotype", "DAR_deg_overlap", "log2FC_deg")
 
 write_csv(dars_with_distances_and_metadata,"~/BIOS784-Functional_Genomics/working_data/dars_with_distances_and_metadata.csv")
 
