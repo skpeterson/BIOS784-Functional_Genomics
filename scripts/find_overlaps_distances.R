@@ -1,65 +1,49 @@
+# Load necessary libraries
 library(GenomicRanges)
-library(GenomicDistributions)
-
-# Make chromosome metadata consistent
-seqlevels(dars_gr) <- gsub("^chr", "", seqlevels(dars_gr))
-seqlevels(degs_gr) <- gsub("^chr", "", seqlevels(degs_gr))
-
-# Calculate overlaps
-overlaps <- findOverlaps(dars_gr, degs_gr)
-
-# Count peaks that overlap any DEG regions
-dars_near_degs <- length(unique(queryHits(overlaps)))
-dars_near_degs
-
-# calculate distance to nearest - dars & degs
-dist_to_nearest <- distanceToNearest(dars_gr, degs_gr)
-
-# get results
-results <- data.frame(
-  query = queryHits(dist_to_nearest),   # ATAC-seq peak index
-  subject = subjectHits(dist_to_nearest), # Genomic region index
-  distance = mcols(dist_to_nearest)$distance # Distance
-)
-
-glimpse(results)
-
-# Merge metadata with original GRanges
-
 library(plyranges)
 
 
-# Find the nearest DEGs to DARs and calculate the distances
+# Define promoter regions for DEGs (e.g., 2 kb upstream and 500 bp downstream of the TSS)
+degs_promoters <- promoters(degs_gr, upstream = 2000, downstream = 500)
+
+# Calculate overlaps between DARs and DEG promoters
+overlaps <- findOverlaps(dars_gr, degs_promoters)
+dars_near_promoters <- length(unique(queryHits(overlaps)))
+print(dars_near_promoters)  # Number of unique DARs overlapping DEG promoters
+
+# Calculate distance to the nearest DEG promoter for each DAR
+dist_to_nearest <- distanceToNearest(dars_gr, degs_promoters)
+
+# Create a data frame summarizing DAR-DEG promoter relationships
+results <- data.frame(
+  query = queryHits(dist_to_nearest),    # DAR index
+  subject = subjectHits(dist_to_nearest), # DEG promoter index
+  distance = mcols(dist_to_nearest)$distance # Distance
+)
+
+# Join DARs with the nearest DEG promoters
 nearest_degs <- dars_gr %>%
-  join_nearest(degs_gr)
-dist_to_nearest <- distanceToNearest(nearest_degs, degs_gr)
-distances <- mcols(dist_to_nearest)$distance
-nearest_degs <- nearest_degs %>%
-  mutate(distance = distances)
+  join_nearest(degs_promoters) %>%
+  mutate(distance = mcols(dist_to_nearest)$distance)
 
+# Combine DARs, distances, and DEG promoter metadata into a single data frame
+dars_with_distances_and_metadata <- cbind(
+  as.data.frame(dars_gr), 
+  distance = mcols(dist_to_nearest)$distance, 
+  as.data.frame(degs_promoters[subjectHits(dist_to_nearest)])  # Extract promoter metadata
+)
 
-# Extract the distances (distances between DARs and nearest DEGs)
-distances <- mcols(dist_to_nearest)$distance
+colnames(dars_with_distances_and_metadata) <- c("seqnames_dar", "start_dar", "end_dar", "width_dar",
+                                                "strand_dar", "cell_type_dar", "logFC_dar","distance",
+                                                "seqnames_degs","start_deg", "end_deg", "width_deg","strand_deg",
+                                                "cell_type_deg", "gene_name", "gene_biotype", "DAR_deg_overlap", "log2FC_deg")
 
-# Extract the indices of the nearest DEGs for each DAR
-nearest_deg_indices <- subjectHits(dist_to_nearest)
-
-# Extract the metadata of the nearest DEGs (metadata from degs_gr)
-nearest_degs_metadata <- degs_gr[nearest_deg_indices]@elementMetadata
-
-# Create a data frame to combine DARs with distances and DEGs metadata
-dars_with_distances_and_metadata <- cbind(as.data.frame(dars_gr), distance = distances, nearest_degs_metadata)
-
-colnames(dars_with_distances_and_metadata) <- c("seqnames", "start", "end", "width", "strand", "cell_type_dar", "logFC_dar","distance", "cell_type_deg",
-                                                "gene_name", "gene_biotype", "DAR_deg_overlap", "log2FC_deg")
-
-write_csv(dars_with_distances_and_metadata,"~/BIOS784-Functional_Genomics/working_data/dars_with_distances_and_metadata.csv")
+write_csv(dars_with_distances_and_metadata,"working_data/dars_with_distances_and_metadata.csv")
 
 metadata <- mcols(dist_to_nearest)
 dars_gr_with_metadata <- dars_gr
 mcols(dars_gr_with_metadata) <- cbind(mcols(dars_gr), metadata)
 
 print(dars_gr_with_metadata)
-
 
 
