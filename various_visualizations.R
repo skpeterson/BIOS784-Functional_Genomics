@@ -41,7 +41,7 @@ pca_df %>%
 #still no real clustering
 
 dars_with_distances_and_metadata %>%
-  ggplot(aes(x = cell_type_deg, y = log(distance), color = cell_type_deg))+
+  ggplot(aes(x = cell_type_dar, y = log(distance), color = cell_type_dar))+
   geom_boxplot()+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
@@ -66,4 +66,28 @@ dars_with_distances_and_metadata %>%
   select(distance, DAR_deg_overlap) %>%
   table()
   
+dars_with_distances_and_metadata %>%
+  mutate(less_than100 = distance < 100) %>%
+  select(less_than100, DAR_deg_overlap) %>%
+  table()
+
+dars_with_distances_and_metadata_by_cell_type %>%
+  filter(distance == 0) %>%
+  select(distance, DAR_deg_overlap) %>%
+  table()
+
+#check correlation between between log2FC and log2FC
+
+cor(dars_with_distances_and_metadata$logFC_dar,dars_with_distances_and_metadata$log2FC_deg)
+
+dars_with_distances_and_metadata %>%
+  ggplot(aes(logFC_dar, log2FC_deg, color = DAR_deg_overlap)) +
+  geom_point() + geom_smooth(color = "black") + facet_wrap(~cell_type_dar) #+ 
+  #labs(x = "Log2FC from the DAR", y = "Log2FC from the DEG")
+
+# make a plot for if they agree in sign
+  
+
+
+
 
