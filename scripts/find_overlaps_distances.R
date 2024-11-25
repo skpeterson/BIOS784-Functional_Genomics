@@ -38,7 +38,7 @@ colnames(dars_with_distances_and_metadata) <- c("seqnames_dar", "start_dar", "en
                                                 "seqnames_degs","start_deg", "end_deg", "width_deg","strand_deg",
                                                 "cell_type_deg", "gene_name", "gene_biotype", "DAR_deg_overlap", "log2FC_deg")
 
-write_csv(dars_with_distances_and_metadata,"working_data/dars_with_distances_and_metadata.csv")
+#write_csv(dars_with_distances_and_metadata,"working_data/dars_with_distances_and_metadata.csv")
 
 metadata <- mcols(dist_to_nearest)
 dars_gr_with_metadata <- dars_gr
