@@ -6,6 +6,42 @@ library(plyranges)
 # Define promoter regions for DEGs (e.g., 2 kb upstream and 500 bp downstream of the TSS)
 degs_promoters <- promoters(degs_gr, upstream = 2000, downstream = 500)
 
+
+# Step 1: Identify unique cell types
+cell_types <- intersect(unique(degs_gr$cell_type), unique(dars_gr$cell_type))
+
+# Step 2: Initialize a list to store results
+overlap_hits <- list()
+
+# Step 3: Loop over each cell type and compute overlaps
+for (ct in cell_types) {
+  # Subset DEGs promoters and DARs for the current cell type
+  degs_subset <- degs_promoters[degs_promoters$cell_type == ct]
+  dars_subset <- dars_gr[dars_gr$cell_type == ct]
+  
+  # Find overlaps with DARs as the first argument
+  overlaps <- findOverlaps(dars_subset, degs_subset)
+  
+  # Store the Hits object
+  overlap_hits[[ct]] <- overlaps
+}
+
+# Step 5: Calculate unique DARs per cell type
+dars_near_promoters_by_cell_type <- sapply(overlap_hits, function(hit) {
+  length(unique(queryHits(hit)))
+})
+
+dars_by_cell_type <- sapply(cell_types, function(ct) {
+  dars_subset <- dars_gr[dars_gr$cell_type == ct]
+  length(unique(dars_subset))
+})
+
+
+
+
+
+
+# old code below
 # Calculate overlaps between DARs and DEG promoters
 overlaps <- findOverlaps(dars_gr, degs_promoters)
 dars_near_promoters <- length(unique(queryHits(overlaps)))
