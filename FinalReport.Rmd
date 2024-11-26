@@ -2,11 +2,14 @@
 title: "Untitled"
 author: "Annika Cleven"
 date: "2024-11-20"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(kableExtra)
 ```
 
 ## Project Motivation
@@ -26,7 +29,7 @@ degs_promoters <- promoters(degs_gr, upstream = 2000, downstream = 500)
 
 We also grouped DEGs and DARs by cell type to determine cell-type specific associations between DEGs and DARs. We calculated distance between DEG promoters and DARs.
 
-```{r}
+```{r, eval = FALSE}
 cell_types <- intersect(unique(degs_gr$cell_type), unique(dars_gr$cell_type))
 
 # Step 1: Initialize lists to store results by cell type
@@ -129,6 +132,44 @@ Methods:
 
 Conclusions
 - Looking at distance stratified by cell type (DAR)
+
+![Distance to Nearest DEG by Cell Type](~/BIOS784-Functional_Genomics/figures/dist_by_celltype_plot.png)
+
 - Look at distance stratified by gene biotype: y - distance, x - biotype
+
+![Distance to Nearest DEG by Gene Biotype](~/BIOS784-Functional_Genomics/figures/dist_by_biotype_plot.png)
+
 - Distances don't overlap with their DAR/DEG variable. TRUE/FALSE vs distances. Results aren't consistent, but they only have a binary variable for us to compare results to
+
+-we are looking at closest DEG compared to them finding the nearest gene --> important to look at nearest DEG for more biological relevance. 
+
+```{r, echo = FALSE}
+read_csv("figures/distance_overlap_check.csv") %>%
+  kbl(caption = "Distance to nearest DEG compared to Their Overlap Variable") %>%
+  kable_classic()
+```
+
+```{r, echo = FALSE}
+read_csv("figures/distance<100_overlap_check.csv") %>%
+  kbl(caption = "Distance Overlap of <100 bp Compared to Their Overlap Variable") %>%
+  kable_classic()
+```
+
+
 - Correlations between logfold changes
+
+Correlation between DAR and DEG Log2FC : 0.05511845
+
+
+
+
+- Matching the sign of the logfold changes 
+![](~/BIOS784-Functional_Genomics/figures/sign_match_plot.png)
+
+```{r}
+read_csv("figures/sign_table.csv") %>%
+  kbl(caption = "Signs of the Log 2 FC") %>%
+  kable_classic()
+```
+
+
