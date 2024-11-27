@@ -40,6 +40,8 @@ colnames(dars_with_distances_and_metadata) <- c("seqnames_dar", "start_dar", "en
                                                 "seqnames_degs","start_deg", "end_deg", "width_deg","strand_deg",
                                                 "cell_type_deg", "gene_name", "gene_biotype", "DAR_deg_overlap", "log2FC_deg")
 
+cell_type_overlaps <- dars_with_distances_and_metadata %>% group_by(cell_type_dar, DAR_deg_overlap) %>% tally()
+
 # write_csv(dars_with_distances_and_metadata,"working_data/dars_with_distances_and_metadata.csv")
 
 metadata <- mcols(dist_to_nearest)

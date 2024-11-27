@@ -77,25 +77,3 @@ degs_gr$gene_biotype <- degs_coords_celltype$gene_biotype
 degs_gr$DAR_deg_overlap <- degs_coords_celltype$DAR_DEG_overlap
 degs_gr$log2FC_deg <- degs_coords_celltype$avg_log2FC
 
-degs_gr$cell_type <- sapply(degs_gr$cell_type, function(x) {
-  if (x %in% c("B_intermediate", "B_memory", "B_naive", "Plasmablast")) {
-    "B_Cells"
-  } else if (x %in% c("CD14_Mono", "CD16_Mono")) {
-    "Monocytes"
-  } else if (x %in% c("ASDC", "cDC1", "cDC2", "pDC")) {
-    "Dendritic_Cells"
-  } else if (x %in% c("CD4_CTL", "CD4_Naive", "CD4_Proliferating", "CD4_TCM", "CD4_TEM", "Treg")) {
-    "CD4+_T_Cells"
-  } else if (x %in% c("CD8_Naive", "CD8_Proliferating", "CD8_TCM", "CD8_TEM", "MAIT")) {
-    "CD8+_T_Cells"
-  } else if (x %in% c("NK", "NK_Proliferating", "NK_CD56bright")) {
-    "NK_Cells"
-  } else if (x %in% c("ILC", "dnT", "gdT")) {
-    "Other_T_Cells"
-  } else if (x %in% c("Platelet", "Eryth", "HSPC", "Doublet")) {
-    "Other"
-  } else {
-    x # Return original value if no match is found
-  }
-})
-

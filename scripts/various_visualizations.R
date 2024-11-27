@@ -98,7 +98,7 @@ dars_with_distances_and_metadata %>%
   select(less_than100, DAR_deg_overlap) %>%
   table() %>%
   as.data.frame() %>%
-  write_csv("figures/distance<100_overlap_check.csv")
+  write_csv("figures/distance_less100_overlap_check.csv")
 
 dars_with_distances_and_metadata_by_cell_type %>%
   filter(distance == 0) %>%

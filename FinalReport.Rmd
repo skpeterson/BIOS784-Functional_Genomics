@@ -1,8 +1,7 @@
-<<<<<<< HEAD
 ---
-title: "Untitled"
-author: "Annika Cleven"
-date: "2024-11-20"
+title: "Peaking into Single Cell Epigenetics"
+author: "Annika Cleven, Sara Peterson, Hazil Milla, Yishu Zhang"
+date: "2024-12-04"
 output: html_document
 ---
 
@@ -10,303 +9,187 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Project Motivation
+```{r, echo=FALSE, results='hide',warning=FALSE}
+suppressPackageStartupMessages({library(dplyr)
+  library(knitr)})
+```
+
+
+## Project Motivation and Background
 
 Our project is motivated by "Epigenetic dysregulation in Alzheimer’s disease peripheral immunity" (2024, Ramakrishnan).  This study investigates the transcriptional changes in the peripheral immune system in Alzheimer's disease (AD) using advanced single-cell sequencing techniques such as scATAC-seq and scRNA-seq. Ramakrishnan and his team found a considerable amount of open chromatin in the peripheral immune cells in AD relative to health controls (HC). They also identified differentially accessible chromatin regions in AD risk genes by checking the overlap between differentially expressed genes and differentially accessible regions for AD and HC.
 
 In the investigation, the researchers include a list of the differentially expressed genes (DEGs) associated with AD, their associated log 2 fold change, and overlaps between these DEGs and differentially accessible regions (DARs). While they provide overlaps between the DARs and DEGs, they do not give any further information. In our analysis we investigate the distance between DEGs and DARs. A primary goal of our investigation is to verify the study's binary overlap results and quantify the distance to and direction from the nearest gene where the overlap occurs. The researchers have also annotated, albeit in a very elementary manner, the DEGs' cell type, as well as the type of the nearest gene. We can also look for trends between gene and cell type and distance to the nearest gene, which can further elaborate on the findings of this study.
 
+![Graphical Abstract ](~/BIOS784-Functional_Genomics/graphical_abstract.png)
+
 ## Methods
 
-The study began by providing information on DARs and DEGs. Using the DEG names they provided, we annotated the gene coordinates that correspond with the gene using the `EnsDb.Hsapiens.v86` library. Using the two GRanges objects containing the DARs and DEGs, we were interested in quantifying the overlap DARs and DEGs. We are particularly interested in the promoter regions of the DEGs and we can extract those from our GRanges object using the promoters() function. Given that chromatin should be accessible at promoters for DEGs, whether promoter regions of DEGs overlap DARs should serve as a positive control.
+### Data Preparation 
+
+We started with the processed DAR and DEG datasets provided in the original study. Using the DEG names, we retrieved the corresponding genomic coordinates by leveraging the EnsDb.Hsapiens.v86 library for gene annotations.
+
+```{r, eval= FALSE}
+# pull out genes from provided processed DEGs
+features <- degs_filter$feature
+
+# Load EnsDb and filter gene coordinates
+edb <- EnsDb.Hsapiens.v86
+g <- genes(edb)
+g <- keepStandardChromosomes(g, pruning.mode = 'coarse') # standard chromosomes
+```
+
+We then utilized `GenomicRanges` library and constructed GRanges objects for both DARs and DEGs. 
+
+```{r, eval=FALSE}
+# Create DARs GRanges object
+dars_gr <- GRanges(seqnames = dars_chr, 
+                   ranges = IRanges(start = dars_start, end = dars_end),
+                   strand = "*")
+
+# Create DEG GRanges object
+degs_gr <- GRanges(
+  seqnames = paste0('chr', degs_coords_mapped$seqnames),  # correct format for seqnames
+  ranges = IRanges(start = degs_coords_mapped$start, end = degs_coords_mapped$end),
+  strand = "*"  # placeholder bc strand not relevant 
+)
+```
+
+### Promoter Regions
+
+To focus on regulatory activity at promoters, we defined promoter regions for DEGs as 2 kb upstream and 500 bp downstream of the transcription start site (TSS). Chromatin accessibility at these regions is critical for gene regulation, making them a logical focus for overlap analysis with DARs. 
 
 ```{r, eval=FALSE}
 # Define promoter regions for DEGs (e.g., 2 kb upstream and 500 bp downstream of the TSS)
 degs_promoters <- promoters(degs_gr, upstream = 2000, downstream = 500)
 ```
 
-We also grouped DEGs and DARs by cell type to determine cell-type specific associations between DEGs and DARs. We calculated distance between DEG promoters and DARs.
+### Quantifying Overlaps
 
-```{r}
-cell_types <- intersect(unique(degs_gr$cell_type), unique(dars_gr$cell_type))
-
-# Step 1: Initialize lists to store results by cell type
-results_by_cell_type <- list()
-dars_with_distances_and_metadata_by_cell_type <- list()
-
-# Step 2: Loop over each cell type and compute necessary steps
-for (ct in cell_types) {
-  
-  # Subset DEGs promoters and DARs for the current cell type
-  degs_subset <- degs_promoters[degs_promoters$cell_type == ct]
-  dars_subset <- dars_gr[dars_gr$cell_type == ct]
-  
-  # Check if both subsets are non-empty to avoid errors
-  if (length(degs_subset) == 0 || length(dars_subset) == 0) {
-    warning(paste("Skipping cell type", ct, "due to empty DEGs or DARs."))
-    next
-  }
-  
-  # Step 3: Calculate the distance to the nearest DEG promoter for each DAR
-  dist_to_nearest <- distanceToNearest(dars_subset, degs_subset)
-  
-  # Create a vector of distances with NA for unmatched DARs
-  distances <- rep(NA, length(dars_subset))
-  distances[queryHits(dist_to_nearest)] <- mcols(dist_to_nearest)$distance
-  
-  # Retrieve indices of matched DARs and DEGs
-  matched_dars_indices <- queryHits(dist_to_nearest)
-  matched_degs_indices <- subjectHits(dist_to_nearest)
-  
-  # Initialize empty DataFrame for DEG metadata with NA values
-  n_dars <- length(dars_subset)
-  deg_metadata_full <- DataFrame(
-    seqnames_deg = rep(NA_character_, n_dars),
-    start_deg = rep(NA_integer_, n_dars),
-    end_deg = rep(NA_integer_, n_dars),
-    strand_deg = rep(NA_character_, n_dars),
-    cell_type_deg = rep(NA_character_, n_dars),
-    gene_name = rep(NA_character_, n_dars),
-    gene_biotype = rep(NA_character_, n_dars),
-    DAR_deg_overlap = rep(NA, n_dars),
-    log2FC_deg = rep(NA_real_, n_dars)
-  )
-  
-  # Only proceed if there are any matches
-  if (length(matched_dars_indices) > 0) {
-    # Extract DEG metadata for matched indices
-    degs_seqnames <- as.character(seqnames(degs_subset))
-    degs_start <- start(degs_subset)
-    degs_end <- end(degs_subset)
-    degs_strand <- as.character(strand(degs_subset))
-    degs_cell_type <- as.character(mcols(degs_subset)$cell_type)
-    degs_gene_name <- as.character(mcols(degs_subset)$gene_name)
-    degs_gene_biotype <- as.character(mcols(degs_subset)$gene_biotype)
-    DAR_deg_overlap <- as.character(mcols(degs_subset)$DAR_deg_overlap)
-    degs_log2FC <- as.numeric(mcols(degs_subset)$log2FC_deg)
-    
-    # Ensure that the lengths of these vectors match the length of degs_subset
-    n_degs <- length(degs_subset)
-    
-    # Now extract the matched metadata
-    deg_metadata_matched <- DataFrame(
-      seqnames_deg = degs_seqnames[matched_degs_indices],
-      start_deg = degs_start[matched_degs_indices],
-      end_deg = degs_end[matched_degs_indices],
-      strand_deg = degs_strand[matched_degs_indices],
-      cell_type_deg = degs_cell_type[matched_degs_indices],
-      gene_name = degs_gene_name[matched_degs_indices],
-      gene_biotype = degs_gene_biotype[matched_degs_indices],
-      DAR_deg_overlap = DAR_deg_overlap[matched_degs_indices],
-      log2FC_deg = degs_log2FC[matched_degs_indices]
-    )
-    
-    # Assign the matched DEG metadata to the corresponding DAR indices
-    deg_metadata_full[matched_dars_indices, ] <- deg_metadata_matched
-  }
-  
-  # Combine DARs, distances, and DEG promoter metadata into a GRanges object
-  mcols(dars_subset)$distance <- distances
-  mcols(dars_subset) <- cbind(mcols(dars_subset), deg_metadata_full)
-  
-  # Store the GRanges object by cell type
-  dars_with_distances_and_metadata_by_cell_type[[ct]] <- dars_subset
-  
-  # Optional: Print a summary for debugging
-  message(paste("Processed cell type:", ct))
-}
-
-# Final: To view the GRanges results by cell type
-dars_with_distances_and_metadata_by_cell_type  # GRanges with distances and metadata by cell type
-# write_csv(dars_with_distances_and_metadata,"working_data/dars_with_distances_and_metadata_by_cell_type.csv")
-```
-
-Ramakrishnan et al. identified 217* overlaps, 38 of which were located within promoter regions of DEGs. We identified 29358 DARs with a distance of 0 from DEG promoter regions (2 kb upstream and 500 bp downstream of the TSS). Of our 29358 DARs overlapping DEGs, only 40 were recorded as overlaps by Ramakrishnan et al., whereas 29318 were not.
-
-
-Methods: 
-- Describe making GRanges, reasoning for promoter
-- Why we separated DARs and DEGs by cell type
-
-Discussion/Conclusions
-- Looking at distance stratified by cell type (DAR)
-- Look at distance stratified by gene biotype: y - distance, x - biotype
-- Distances don't overlap with their DAR/DEG variable. TRUE/FALSE vs distances. Results aren't consistent, but they only have a binary variable for us to compare results to
-- Correlations between logfold changes
-=======
----
-title: "Untitled"
-author: "Annika Cleven"
-date: "2024-11-20"
-output:
-  pdf_document: default
-  html_document: default
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-library(kableExtra)
-```
-
-## Project Motivation
-
-Our project is motivated by "Epigenetic dysregulation in Alzheimer’s disease peripheral immunity" (2024, Ramakrishnan).  This study investigates the transcriptional changes in the peripheral immune system in Alzheimer's disease (AD) using advanced single-cell sequencing techniques such as scATAC-seq and scRNA-seq. Ramakrishnan and his team found a considerable amount of open chromatin in the peripheral immune cells in AD relative to health controls (HC). They also identified differentially accessible chromatin regions in AD risk genes by checking the overlap between differentially expressed genes and differentially accessible regions for AD and HC.
-
-In the investigation, the researchers include a list of the differentially expressed genes (DEGs) associated with AD, their associated log 2 fold change, and overlaps between these DEGs and differentially accessible regions (DARs). While they provide overlaps between the DARs and DEGs, they do not give any further information. In our analysis we investigate the distance between DEGs and DARs. A primary goal of our investigation is to verify the study's binary overlap results and quantify the distance to and direction from the nearest gene where the overlap occurs. The researchers have also annotated, albeit in a very elementary manner, the DEGs' cell type, as well as the type of the nearest gene. We can also look for trends between gene and cell type and distance to the nearest gene, which can further elaborate on the findings of this study.
-
-## Methods
-
-The study began by providing information on DARs and DEGs. Using the DEG names they provided, we annotated the gene coordinates that correspond with the gene using the `EnsDb.Hsapiens.v86` library. Using the two GRanges objects containing the DARs and DEGs, we were interested in quantifying the overlap DARs and DEGs. We are particularly interested in the promoter regions of the DEGs and we can extract those from our GRanges object using the promoters() function. Given that chromatin should be accessible at promoters for DEGs, whether promoter regions of DEGs overlap DARs should serve as a positive control.
+Next, we calculated the number of DARs overlapping DEG promoter regions. This step serves as a positive control, as accessible chromatin at DEG promoters is expected. 
 
 ```{r, eval=FALSE}
-# Define promoter regions for DEGs (e.g., 2 kb upstream and 500 bp downstream of the TSS)
-degs_promoters <- promoters(degs_gr, upstream = 2000, downstream = 500)
+# Calculate overlaps between DARs and DEG promoters
+overlaps <- findOverlaps(dars_gr, degs_promoters)
 ```
 
-We also grouped DEGs and DARs by cell type to determine cell-type specific associations between DEGs and DARs. We calculated distance between DEG promoters and DARs.
+### Distance Analysis
 
-```{r, eval = FALSE}
-cell_types <- intersect(unique(degs_gr$cell_type), unique(dars_gr$cell_type))
+Beyond overlap counts, we assessed the spatial relationship between DARs and DEGs by measuring the distance between each DAR and its nearest DEG promoter. This provides a quantitative measure of proximity, by calculating the basepair distance between the two. 
 
-# Step 1: Initialize lists to store results by cell type
-results_by_cell_type <- list()
-dars_with_distances_and_metadata_by_cell_type <- list()
-
-# Step 2: Loop over each cell type and compute necessary steps
-for (ct in cell_types) {
-  
-  # Subset DEGs promoters and DARs for the current cell type
-  degs_subset <- degs_promoters[degs_promoters$cell_type == ct]
-  dars_subset <- dars_gr[dars_gr$cell_type == ct]
-  
-  # Check if both subsets are non-empty to avoid errors
-  if (length(degs_subset) == 0 || length(dars_subset) == 0) {
-    warning(paste("Skipping cell type", ct, "due to empty DEGs or DARs."))
-    next
-  }
-  
-  # Step 3: Calculate the distance to the nearest DEG promoter for each DAR
-  dist_to_nearest <- distanceToNearest(dars_subset, degs_subset)
-  
-  # Create a vector of distances with NA for unmatched DARs
-  distances <- rep(NA, length(dars_subset))
-  distances[queryHits(dist_to_nearest)] <- mcols(dist_to_nearest)$distance
-  
-  # Retrieve indices of matched DARs and DEGs
-  matched_dars_indices <- queryHits(dist_to_nearest)
-  matched_degs_indices <- subjectHits(dist_to_nearest)
-  
-  # Initialize empty DataFrame for DEG metadata with NA values
-  n_dars <- length(dars_subset)
-  deg_metadata_full <- DataFrame(
-    seqnames_deg = rep(NA_character_, n_dars),
-    start_deg = rep(NA_integer_, n_dars),
-    end_deg = rep(NA_integer_, n_dars),
-    strand_deg = rep(NA_character_, n_dars),
-    cell_type_deg = rep(NA_character_, n_dars),
-    gene_name = rep(NA_character_, n_dars),
-    gene_biotype = rep(NA_character_, n_dars),
-    DAR_deg_overlap = rep(NA, n_dars),
-    log2FC_deg = rep(NA_real_, n_dars)
-  )
-  
-  # Only proceed if there are any matches
-  if (length(matched_dars_indices) > 0) {
-    # Extract DEG metadata for matched indices
-    degs_seqnames <- as.character(seqnames(degs_subset))
-    degs_start <- start(degs_subset)
-    degs_end <- end(degs_subset)
-    degs_strand <- as.character(strand(degs_subset))
-    degs_cell_type <- as.character(mcols(degs_subset)$cell_type)
-    degs_gene_name <- as.character(mcols(degs_subset)$gene_name)
-    degs_gene_biotype <- as.character(mcols(degs_subset)$gene_biotype)
-    DAR_deg_overlap <- as.character(mcols(degs_subset)$DAR_deg_overlap)
-    degs_log2FC <- as.numeric(mcols(degs_subset)$log2FC_deg)
-    
-    # Ensure that the lengths of these vectors match the length of degs_subset
-    n_degs <- length(degs_subset)
-    
-    # Now extract the matched metadata
-    deg_metadata_matched <- DataFrame(
-      seqnames_deg = degs_seqnames[matched_degs_indices],
-      start_deg = degs_start[matched_degs_indices],
-      end_deg = degs_end[matched_degs_indices],
-      strand_deg = degs_strand[matched_degs_indices],
-      cell_type_deg = degs_cell_type[matched_degs_indices],
-      gene_name = degs_gene_name[matched_degs_indices],
-      gene_biotype = degs_gene_biotype[matched_degs_indices],
-      DAR_deg_overlap = DAR_deg_overlap[matched_degs_indices],
-      log2FC_deg = degs_log2FC[matched_degs_indices]
-    )
-    
-    # Assign the matched DEG metadata to the corresponding DAR indices
-    deg_metadata_full[matched_dars_indices, ] <- deg_metadata_matched
-  }
-  
-  # Combine DARs, distances, and DEG promoter metadata into a GRanges object
-  mcols(dars_subset)$distance <- distances
-  mcols(dars_subset) <- cbind(mcols(dars_subset), deg_metadata_full)
-  
-  # Store the GRanges object by cell type
-  dars_with_distances_and_metadata_by_cell_type[[ct]] <- dars_subset
-  
-  # Optional: Print a summary for debugging
-  message(paste("Processed cell type:", ct))
-}
-
-# Final: To view the GRanges results by cell type
-dars_with_distances_and_metadata_by_cell_type  # GRanges with distances and metadata by cell type
-# write_csv(dars_with_distances_and_metadata,"working_data/dars_with_distances_and_metadata_by_cell_type.csv")
+```{r, eval=FALSE}
+# Calculate distance to the nearest DEG promoter for each DAR
+dist_to_nearest <- distanceToNearest(dars_gr, degs_promoters)
 ```
 
-Ramakrishnan et al. identified 217* overlaps, 38 of which were located within promoter regions of DEGs. We identified 29358 DARs with a distance of 0 from DEG promoter regions (2 kb upstream and 500 bp downstream of the TSS). Of our 29358 DARs overlapping DEGs, only 40 were recorded as overlaps by Ramakrishnan et al., whereas 29318 were not.
+## Results and Discussion 
+
+### Summary of Provided Processed Data 
+
+Ramakrishnan et al. identified approximately 140,000 DARs and 75,000 DEGs across multiple immune cell types, representing unique, cell type–specific expression patterns. By applying an adjusted p-value threshold of 0.05 and a log2 fold-change cutoff of > |0.125|, they filtered their dataset to ~9,200 DARs and ~3,400 DEGs.
+
+![Overview plots of Logc2FC of DARs and DEGs after filtering for adjusted p-value and Log2FC ](~/BIOS784-Functional_Genomics/figures/log2fc_dars_degs_as_downloaded_data.png)
+
+### Distance Analysis
+
+Briefly summarizing the data as provided by the paper, we can see the authors identified 68 overlaps with DARs and DEGs, with monocytes having the highest number among the cell types. 
+
+```{r, echo=FALSE}
+## read in data 
+dars_all <- read.csv('source_data/TableS2_DAR_between_AD_HC.txt',sep = '\t')
+degs_all <- read.csv('source_data/TableS3_DEG_between_AD_HC.txt', sep = '\t')
+
+## filter data by p-value and log2fc cut offs for significant data 
+dars_all <- dars_all %>% 
+  filter(LR_padj < 0.05) %>% 
+  filter(avg_log2FC > 0.125 | avg_log2FC < -0.125)
 
 
-Methods: 
-- Describe making GRanges, reasoning for promoter
-- Why we separated DARs and DEGs by cell type
+degs_all <- degs_all %>% 
+  filter(MAST_padj < 0.05) %>% 
+  filter(avg_log2FC > 0.125 | avg_log2FC < -0.125)
 
-Conclusions
-- Looking at distance stratified by cell type (DAR)
+degs_all$cell_type <- sapply(degs_all$cell_type, function(x) {
+  if (x %in% c("B_intermediate", "B_memory", "B_naive", "Plasmablast")) {
+    return("B_Cells")
+  } else if (x %in% c("CD14_Mono", "CD16_Mono")) {
+    return("Monocytes")
+  } else if (x %in% c("ASDC", "cDC1", "cDC2", "pDC")) {
+    return("Dendritic_Cells")
+  } else if (x %in% c("CD4_CTL", "CD4_Naive", "CD4_Proliferating", "CD4_TCM", "CD4_TEM", "Treg")) {
+    return("CD4+_T_Cells")
+  } else if (x %in% c("CD8_Naive", "CD8_Proliferating", "CD8_TCM", "CD8_TEM", "MAIT")) {
+    return("CD8+_T_Cells")
+  } else if (x %in% c("NK", "NK_Proliferating", "NK_CD56bright")) {
+    return("NK_Cells")
+  } else if (x %in% c("ILC", "dnT", "gdT")) {
+    return("Other_T_Cells")
+  } else if (x %in% c("Platelet", "Eryth", "HSPC", "Doublet")) {
+    return("Other")
+  } else {
+    return(x) # Return the original value if no match is found
+  }
+})
+
+summary_overlaps <- degs_all %>% group_by(cell_type,DAR_DEG_overlap) %>% tally()
+
+summary_overlaps %>%
+  kable(caption = "Counts of DAR-DEG Overlaps by Cell Type",
+    col.names = c("Cell Type", "DAR-DEG Overlap", "Count"))
+```
+
+
+Looking at our data, we identified 158 overlaps between DEGs and DARs, with CD 8+ T Cells having the highest. Provided that the data as downloaded did not have the ranges of the genes, it is possible that the difference is due to how we handled out promoter regions which accounts for the difference between our results and the paper results. 
+
+```{r, echo=FALSE}
+dars_with_distances_and_metadata <- read.csv("working_data/dars_with_distances_and_metadata.csv")
+cell_type_overlaps <- dars_with_distances_and_metadata %>% group_by(cell_type_dar, DAR_deg_overlap) %>% tally()
+
+cell_type_overlaps %>%
+  kable(caption = "Counts of DAR-DEG Overlaps by Cell Type",
+    col.names = c("Cell Type", "DAR-DEG Overlap", "Count"))
+```
+
+
+#### Stratified by Cell Type
+
+To assess whether the relationship between DARs and DEGs varies by immune cell type, we analyzed the distances between DARs and their nearest DEGs, stratified by cell type. Our results indicate that cell type does not appear to influence these distances—the distances were relatively consistent across all immune cell types. This suggests that regulatory elements (DARs) are equally distant from their associated genes across different cell types.
 
 ![Distance to Nearest DEG by Cell Type](~/BIOS784-Functional_Genomics/figures/dist_by_celltype_plot.png)
+#### Stratified by Gene Type
 
-- Look at distance stratified by gene biotype: y - distance, x - biotype
+Next, we examined the distances between DARs and DEGs stratified by gene biotype (e.g., protein-coding genes, lncRNAs, pseudogenes). The results reveal that while protein-coding genes predominate, other gene types exhibit variable distances to DARs. This variation suggests potential differences in regulatory mechanisms or constraints depending on the biotype of the DEG.
 
 ![Distance to Nearest DEG by Gene Biotype](~/BIOS784-Functional_Genomics/figures/dist_by_biotype_plot.png)
+### Comparison to Paper Overlaps Results
 
 - Distances don't overlap with their DAR/DEG variable. TRUE/FALSE vs distances. Results aren't consistent, but they only have a binary variable for us to compare results to
 
 -we are looking at closest DEG compared to them finding the nearest gene --> important to look at nearest DEG for more biological relevance. 
 
 ```{r, echo = FALSE}
-read_csv("figures/distance_overlap_check.csv") %>%
-  kbl(caption = "Distance to nearest DEG compared to Their Overlap Variable") %>%
-  kable_classic()
+read.csv("figures/distance_overlap_check.csv") %>%
+  kable(caption = "Distance to nearest DEG compared to Published Overlap")
 ```
 
 ```{r, echo = FALSE}
-read_csv("figures/distance<100_overlap_check.csv") %>%
-  kbl(caption = "Distance Overlap of <100 bp Compared to Their Overlap Variable") %>%
-  kable_classic()
+read.csv("figures/distance_less100_overlap_check.csv") %>%
+  kable(caption = "Distance Overlap of <100 bp Compared to Published Overlap")
 ```
 
 
-- Correlations between logfold changes
+### Correlations between DAR and DEG Log2FC
 
-Correlation between DAR and DEG Log2FC : 0.05511845
+To assess whether DARs and DEGs exhibit correlated transcriptional and chromatin accessibility changes, we calculated the correlation between their log2 fold-changes. The correlation coefficient was 0.055, indicating no strong linear relationship between DAR and DEG activity. Literature suggests that these should be more highly correlated, so this result is surprising to us. We aren't quite sure why the correlation is so low. 
 
+### Accessibility and Expression Sign Consistency
 
+We examined whether DAR and DEG log2 fold-changes share the same sign (i.e., both upregulated or both downregulated). While sign consistency was not universal, a  portion of DAR-DEG pairs demonstrated matching signs, suggesting coordinated regulatory changes in certain cases. In general, increased chromatin accessibility is associated with higher gene expression, as open chromatin provides easier access for transcriptional machinery. However, this relationship is not absolute. Transcription factors (TFs) and other regulatory proteins can modulate gene expression independently of accessibility, with some TFs repressing transcription even in accessible regions, or activating transcription by binding to closed chromatin regions and promoting chromatin remodeling.
 
-
-- Matching the sign of the logfold changes 
 ![](~/BIOS784-Functional_Genomics/figures/sign_match_plot.png)
 
 ```{r}
-read_csv("figures/sign_table.csv") %>%
-  kbl(caption = "Signs of the Log 2 FC") %>%
-  kable_classic()
+read.csv("figures/sign_table.csv") %>%
+  kable(caption = "Signs of the Log 2 FC")
 ```
 
-
->>>>>>> 8ddd5c9286a455857c752b9ab5d4ef572535e470
