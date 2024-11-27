@@ -127,7 +127,7 @@ Methods:
 - Describe making GRanges, reasoning for promoter
 - Why we separated DARs and DEGs by cell type
 
-Conclusions
+Discussion/Conclusions
 - Looking at distance stratified by cell type (DAR)
 - Look at distance stratified by gene biotype: y - distance, x - biotype
 - Distances don't overlap with their DAR/DEG variable. TRUE/FALSE vs distances. Results aren't consistent, but they only have a binary variable for us to compare results to
