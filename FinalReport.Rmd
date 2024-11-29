@@ -2,7 +2,9 @@
 title: "Peaking into Single Cell Epigenetics"
 author: "Annika Cleven, Sara Peterson, Hazil Milla, Yishu Zhang"
 date: "2024-12-04"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -86,7 +88,7 @@ dist_to_nearest <- distanceToNearest(dars_gr, degs_promoters)
 
 ### Summary of Provided Processed Data 
 
-Ramakrishnan et al. identified approximately 140,000 DARs and 75,000 DEGs across multiple immune cell types, representing unique, cell type–specific expression patterns. By applying an adjusted p-value threshold of 0.05 and a log2 fold-change cutoff of > |0.125|, they filtered their dataset to ~9,200 DARs and ~3,400 DEGs.
+Ramakrishnan et al. identified approximately 140,000 DARs and 75,000 DEGs across multiple immune cell types, representing unique, cell type–specific expression patterns. By applying an adjusted p-value threshold of 0.05 and a log2 fold-change cutoff of > |0.125|, they filtered their dataset to ~9,200 DARs and ~3,400 DEGs. In response, we filtered the dataset with this p-value threshold as well.
 
 ![Overview plots of Logc2FC of DARs and DEGs after filtering for adjusted p-value and Log2FC ](~/BIOS784-Functional_Genomics/figures/log2fc_dars_degs_as_downloaded_data.png)
 
@@ -139,7 +141,7 @@ summary_overlaps %>%
 ```
 
 
-Looking at our data, we identified 158 overlaps between DEGs and DARs, with CD 8+ T Cells having the highest. Provided that the data as downloaded did not have the ranges of the genes, it is possible that the difference is due to how we handled out promoter regions which accounts for the difference between our results and the paper results. 
+Looking at our data, we identified 158 overlaps between DEGs and DARs, with CD 8+ T Cells having the highest. Provided that the data as downloaded did not have the ranges of the genes, it is possible that the difference is due to how we handled our promoter regions which accounts for the difference between our results and the paper results. 
 
 ```{r, echo=FALSE}
 dars_with_distances_and_metadata <- read.csv("working_data/dars_with_distances_and_metadata.csv")
