@@ -19,13 +19,15 @@ suppressPackageStartupMessages({library(dplyr)
 
 ## Project Motivation and Background
 
-Our project is motivated by "Epigenetic dysregulation in Alzheimer’s disease peripheral immunity" (2024, Ramakrishnan).  This study investigates the transcriptional changes in the peripheral immune system in Alzheimer's disease (AD) using advanced single-cell sequencing techniques such as scATAC-seq and scRNA-seq. Ramakrishnan and his team found a considerable amount of open chromatin in the peripheral immune cells in AD relative to health controls (HC). They also identified differentially accessible chromatin regions in AD risk genes by checking the overlap between differentially expressed genes and differentially accessible regions for AD and HC.
+This project builds on insights from "Epigenetic Dysregulation in Alzheimer’s Disease Peripheral Immunity" (2024, Ramakrishnan), which utilized single cell assay of transposable accessible chromatin sequencing (scATAC-seq) and single cell RNA sequencing (scRNA-seq) to investigate transcriptional and chromatin accessibility changes in the peripheral immune system of Alzheimer’s disease (AD) patients compared to healthy controls (HC). The study identified significant increases in chromatin accessibility in peripheral immune cells of AD patients, with a focus on the APOE gene (APO lipoprotein E), a key risk gene for AD with three isoforms: APOE2, APOE3, and APOE4. The authors provided a list of differentially expressed genes (DEGs), their log2 fold changes, and overlaps between DEGs and differentially accessible regions (DARs).
 
-In the investigation, the researchers include a list of the differentially expressed genes (DEGs) associated with AD, their associated log 2 fold change, and overlaps between these DEGs and differentially accessible regions (DARs). While they provide overlaps between the DARs and DEGs, they do not give any further information. In our analysis we investigate the distance between DEGs and DARs. A primary goal of our investigation is to verify the study's binary overlap results and quantify the distance to and direction from the nearest gene where the overlap occurs. The researchers have also annotated, albeit in a very elementary manner, the DEGs' cell type, as well as the type of the nearest gene. We can also look for trends between gene and cell type and distance to the nearest gene, which can further elaborate on the findings of this study.
+Single-cell multiomic (multiple biological measurements from the same cell) analyses, particularly those utilizing scATAC-seq, remain a field without standard data processing pipelines and steps. Thus these data present a unique opportunity to learn exploratory analysis techniques for linking chromatin state to transcriptional activity in immune cells at single-cell resolution.
+
+Our study extends the scope of Ramakrishnan et al. by systematically quantifying the spatial relationship between DARs and DEGs across all immune cell types. Specifically, we aim to expand upon the reported binary overlap results by measuring distances between DARs and the nearest DEG promoters. Additionally, we explore correlations between gene regulation patterns and cell types to identify potential trends linking DAR proximity, gene type, and immune cell identity.
 
 ![Graphical Abstract ](~/BIOS784-Functional_Genomics/graphical_abstract.png)
 
-## Methods
+## Data Analysis Methods
 
 ### Data Preparation 
 
@@ -94,6 +96,8 @@ Ramakrishnan et al. identified approximately 140,000 DARs and 75,000 DEGs across
 
 ### Distance Analysis
 
+#### Comparison to Paper Results 
+
 Briefly summarizing the data as provided by the paper, we can see the authors identified 68 overlaps with DARs and DEGs, with monocytes having the highest number among the cell types. 
 
 ```{r, echo=FALSE}
@@ -140,7 +144,6 @@ summary_overlaps %>%
     col.names = c("Cell Type", "DAR-DEG Overlap", "Count"))
 ```
 
-
 Looking at our data, we identified 158 overlaps between DEGs and DARs, with CD 8+ T Cells having the highest. Provided that the data as downloaded did not have the ranges of the genes, it is possible that the difference is due to how we handled our promoter regions which accounts for the difference between our results and the paper results. 
 
 ```{r, echo=FALSE}
@@ -151,6 +154,18 @@ cell_type_overlaps %>%
   kable(caption = "Counts of DAR-DEG Overlaps by Cell Type",
     col.names = c("Cell Type", "DAR-DEG Overlap", "Count"))
 ```
+Ramakrishnan et al. provide TRUE/FALSE as the read out for DAR and DEG overlap. To compare out calculated distances to their results, we look at how often our calculated value of 0 matches their value of 'True'. We find that while the results are not, we confirmed use of the same reference genome (hg38) for annotating genes
+
+```{r, echo = FALSE}
+read.csv("figures/distance_overlap_check.csv") %>%
+  kable(caption = "Distance to nearest DEG compared to Published Overlap")
+```
+
+One additional comparison is to look at how often the DAR is overlapping more than one DEG. By counting the number of overlaps and plotting this as a histogram, we can see that while the majority of our DARs overlap with 0 DEGs as we noted previously, we can see that we do have DARs that overlap with up to 15 DEGs. It is possible that the location of a high number of overlaps is occurring is gene rich portions in the genome, such the major histocompatibility complex (MHC). Located on chr6, the MHC is densely populated with genes that that play a key role in regulating the immune system, and these genes typically have higher accesssibility in immune cell populations.
+
+![Frequency of number of DEGs overlapping a a single DAR](~/BIOS784-Functional_Genomics/figures/hist_freq_num_overlaps_per_DAR_DEG.png)
+
+One additional thought, while this considers DAR and DEG overlap, perhaps the initial overlap comparison would make more sense if done between DARs and all genes, as opposed to only differentially expressed genes. The processed data as provided by the authors includes only the log2FC values between disease/healthy individuals, so we are unable to explore expression of all genes. 
 
 
 #### Stratified by Cell Type
@@ -158,21 +173,13 @@ cell_type_overlaps %>%
 To assess whether the relationship between DARs and DEGs varies by immune cell type, we analyzed the distances between DARs and their nearest DEGs, stratified by cell type. Our results indicate that cell type does not appear to influence these distances—the distances were relatively consistent across all immune cell types. This suggests that regulatory elements (DARs) are equally distant from their associated genes across different cell types.
 
 ![Distance to Nearest DEG by Cell Type](~/BIOS784-Functional_Genomics/figures/dist_by_celltype_plot.png)
+
 #### Stratified by Gene Type
 
 Next, we examined the distances between DARs and DEGs stratified by gene biotype (e.g., protein-coding genes, lncRNAs, pseudogenes). The results reveal that while protein-coding genes predominate, other gene types exhibit variable distances to DARs. This variation suggests potential differences in regulatory mechanisms or constraints depending on the biotype of the DEG.
 
 ![Distance to Nearest DEG by Gene Biotype](~/BIOS784-Functional_Genomics/figures/dist_by_biotype_plot.png)
-### Comparison to Paper Overlaps Results
 
-- Distances don't overlap with their DAR/DEG variable. TRUE/FALSE vs distances. Results aren't consistent, but they only have a binary variable for us to compare results to
-
--we are looking at closest DEG compared to them finding the nearest gene --> important to look at nearest DEG for more biological relevance. 
-
-```{r, echo = FALSE}
-read.csv("figures/distance_overlap_check.csv") %>%
-  kable(caption = "Distance to nearest DEG compared to Published Overlap")
-```
 
 ```{r, echo = FALSE}
 read.csv("figures/distance_less100_overlap_check.csv") %>%

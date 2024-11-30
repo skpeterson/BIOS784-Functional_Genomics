@@ -1,5 +1,39 @@
 #visualizing the overlaps 
 
+
+
+#### look at how many genes overlap each DAR
+# tells us if there are few dars with many overlaps, or many dars with few overlaps
+
+overlaps_per <- count_overlaps(dars_gr, degs_promoters) %>% as.data.frame()
+
+overlaps_df <- data.frame(
+  DAR = seq_along(overlaps_per$.),
+  Overlaps = overlaps_per$.
+)
+
+overlaps_per_hist <- ggplot(overlaps_df, aes(x = Overlaps)) +
+  geom_histogram(binwidth = 1, fill = "steelblue", color = "black") +
+  scale_y_continuous(transform = "log10") +
+  labs(
+    title = "",
+    x = "Number of Overlaps",
+    y = "Frequency"
+  ) +
+  theme_classic()
+
+ggsave('figures/hist_freq_num_overlaps_per_DAR_DEG.png', overlaps_per_hist, units = 'in', width = 5, height = 3)
+
+
+# look at the MHC regions to see if this is where the high level of overlaps occurs 
+
+mhc_region <- GRanges(seqnames = "chr6", ranges = IRanges(start = 28477797, end = 33448354))
+overlaps_in_mhc <- subsetByOverlaps(dars_gr, mhc_region)
+
+genes_in_mhc <- subset(degs_promoters, seqnames == "chr6" & start >= 28477797 & end <= 33448354)
+print(as.data.frame(genes_in_mhc))
+
+
 # check if the the nearest gene is a DEG
 
 dars_with_distances_and_metadata %>%
@@ -13,7 +47,8 @@ dars_with_distances_and_metadata %>%
 dars_with_distances_and_metadata %>%
   ggplot(aes(x = seqnames_dar, y = distance, color = cell_type_dar))+
   geom_point() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+  theme_classic()
 
 # log distance by the cell_type (identified by the dar)
 # notes that a difference in the log at this scale is pretty significant

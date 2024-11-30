@@ -41,6 +41,7 @@ dars_gr <- GRanges(seqnames = dars_chr,
                    strand = "*")
 dars_gr$cell_type <- dars_filter$cell_type
 dars_gr$logFC_dar <- dars_filter$avg_log2FC
+dars_gr$cell_id <- dars_filter$X
 
 # make DEGs Granges object ------------------------------------------------
 
@@ -65,9 +66,9 @@ degs_coords_mapped <- degs_coords_celltype[!is.na(degs_coords_celltype$start) & 
 
 # Create GRanges object
 degs_gr <- GRanges(
-  seqnames = paste0('chr', degs_coords_mapped$seqnames),  # correct format for seqnames
+  seqnames = paste0('chr', degs_coords_mapped$seqnames),  
   ranges = IRanges(start = degs_coords_mapped$start, end = degs_coords_mapped$end),
-  strand = "*"  # placeholder bc strand not relevant 
+  strand = "*"  # placeholder bc strand not relevant for this analysis
 )
 
 # Add metadata from downloaded data 
@@ -76,4 +77,5 @@ degs_gr$gene_name <- degs_coords_celltype$feature
 degs_gr$gene_biotype <- degs_coords_celltype$gene_biotype
 degs_gr$DAR_deg_overlap <- degs_coords_celltype$DAR_DEG_overlap
 degs_gr$log2FC_deg <- degs_coords_celltype$avg_log2FC
+degs_gr$cell_id <- degs_coords_celltype$X
 

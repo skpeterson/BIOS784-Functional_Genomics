@@ -9,9 +9,10 @@ degs_promoters <- promoters(degs_gr, upstream = 2000, downstream = 500)
 
 
 # Calculate overlaps between DARs and DEG promoters
-overlaps <- findOverlaps(dars_gr, degs_promoters)
+overlaps <- findOverlaps(dars_gr, degs_promoters, ignore.strand=T)
 dars_near_promoters <- length(unique(queryHits(overlaps)))
-print(dars_near_promoters)  # Number of unique DARs overlapping DEG promoters
+print(dars_near_promoters)  # Number of DARs overlapping DEG promoters (DAR could overlap multiple DEGs)
+
 
 # Calculate distance to the nearest DEG promoter for each DAR
 dist_to_nearest <- distanceToNearest(dars_gr, degs_promoters)
