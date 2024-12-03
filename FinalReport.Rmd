@@ -4,9 +4,9 @@ author: "Annika Cleven, Sara Peterson, Hazil Milla, Yishu Zhang"
 date: "2024-12-04"
 output:
   pdf_document:
-    latex_engine: xelatex
+  latex_engine: xelatex
 ---
-
+  
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -229,4 +229,3 @@ We examined whether DAR and DEG log2 fold-changes share the same sign (i.e., bot
 read.csv("figures/sign_table.csv") %>%
   kable(caption = "Signs of the Log 2 FC")
 ```
-
