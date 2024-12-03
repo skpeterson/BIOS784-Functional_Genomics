@@ -33,8 +33,6 @@ Our study extends the scope of Ramakrishnan et al. by systematically quantifying
 
 We began our analysis by obtaining the processed differentially accessible regions (DARs) and differentially expressed genes (DEGs) datasets provided by Ramakrishnan et al. (2024). These datasets included chromatin accessibility and gene expression changes identified between Alzheimer's disease (AD) patients and healthy controls (HC) across multiple immune cell types. 
 
-In the original study, differential expression analysis was performed using Model-based Analysis of Single-cell Transcriptomics (MAST), a statistical method that models both the probability of expression and the level of expression for each gene in single-cell RNA sequencing data. For identifying DARs from single-cell ATAC-seq data, the authors employed single-cell logistic regression (LR), which models the probability of chromatin accessibility at genomic regions, accommodating the binary nature of ATAC-seq data at single-cell resolution. 
-
 Using the gene names from the DEG dataset, we retrieved the corresponding genomic coordinates to map the genes onto the human genome reference (hg38). We utilized the EnsDb.Hsapiens.v86 library for gene annotations.  
 
 
@@ -74,10 +72,13 @@ degs_promoters <- promoters(degs_gr, upstream = 2000, downstream = 500)
 ```
 
 ### Data Filtering
+
+In the original study, differential expression analysis was performed using Model-based Analysis of Single-cell Transcriptomics (MAST), a statistical method that models both the probability of expression and the level of expression for each gene in single-cell RNA sequencing data. For identifying DARs from single-cell ATAC-seq data, the authors employed single-cell logistic regression (LR), which models the probability of chromatin accessibility at genomic regions, accommodating the binary nature of ATAC-seq data at single-cell resolution. 
+
 To ensure that our analysis focused on statistically significant and biologically relevant changes, we applied filtering criteria consistent with those used by Ramakrishnan et al.:
 
 * Adjusted p-value threshold of 0.05: We filtered both DARs and DEGs based on an adjusted p-value (false discovery rate) less than 0.05 to control for multiple testing and reduce the likelihood of false positives.
-* Log2 fold-change cutoff of greater than |0.125|: We selected DARs and DEGs with absolute log2 fold changes exceeding 0.125 to focus on changes of practical significance.
+* |Log2 fold-change| greater than 0.125: We selected DARs and DEGs with absolute log2 fold changes exceeding 0.125 to focus on changes of practical significance.
 
 This filtering resulted in a subset of DARs and DEGs with significant changes in chromatin accessibility or gene expression between AD patients and healthy controls.
 
