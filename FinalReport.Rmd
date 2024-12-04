@@ -6,7 +6,7 @@ output:
   pdf_document:
   latex_engine: xelatex
 ---
-  
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -16,27 +16,25 @@ suppressPackageStartupMessages({library(dplyr)
   library(knitr)})
 ```
 
-
 ## Project Motivation and Background
 
-This project builds on insights from "Epigenetic Dysregulation in Alzheimer’s Disease Peripheral Immunity" (2024, Ramakrishnan), which utilized single cell assay of transposable accessible chromatin sequencing (scATAC-seq) and single cell RNA sequencing (scRNA-seq) to investigate transcriptional and chromatin accessibility changes in the peripheral immune system of Alzheimer’s disease (AD) patients compared to healthy controls (HC).
+This project builds on insights from "Epigenetic Dysregulation in Alzheimer's Disease Peripheral Immunity" (2024, Ramakrishnan), which utilized single cell assay of transposable accessible chromatin sequencing (scATAC-seq) and single cell RNA sequencing (scRNA-seq) to investigate transcriptional and chromatin accessibility changes in the peripheral immune system of Alzheimer's disease (AD) patients compared to healthy controls (HC).
 
-While some immune cells, such as microglia, have been investigated for their role in the development and progression of Alzheimer’s, the role of the peripheral immune cells has not been investigated in much depth. Learning more about these cells can potentially increase our understanding of AD etiology and pathogenesis. This study identified significant increases in chromatin accessibility and differential gene expression in peripheral immune cells of AD patients relative to healthy controls. They also found differences in chromatin accessibility and transcription based on APOE genotype. APOE (Apolipoprotein E) is a key risk gene for AD with three isoforms: APOE2, APOE3, and APOE4. For our project, we focused on AD vs HC. In particular, we looked at the list of differentially expressed genes (DEGs), their log2 fold changes, and overlaps between DEGs and differentially accessible regions (DARs) provided by the authors.
+While some immune cells, such as microglia, have been investigated for their role in the development and progression of Alzheimer's, the role of the peripheral immune cells has not been investigated in much depth. Learning more about these cells can potentially increase our understanding of AD etiology and pathogenesis. This study identified significant increases in chromatin accessibility and differential gene expression in peripheral immune cells of AD patients relative to healthy controls. They also found differences in chromatin accessibility and transcription based on APOE genotype. APOE (Apolipoprotein E) is a key risk gene for AD with three isoforms: APOE2, APOE3, and APOE4. For our project, we focused on AD vs HC. In particular, we looked at the list of differentially expressed genes (DEGs), their log2 fold changes, and overlaps between DEGs and differentially accessible regions (DARs) provided by the authors.
 
 Single-cell multiomic (multiple biological measurements from the same cell) analyses, particularly those utilizing scATAC-seq, remain a field without standard data processing pipelines and steps. Thus these data present a unique opportunity to learn exploratory analysis techniques for linking chromatin state to transcriptional activity in immune cells at single-cell resolution.
 
 Our study extends the scope of Ramakrishnan et al. by systematically quantifying the spatial relationship between DARs and DEGs across all immune cell types. Specifically, expanded upon the reported binary overlap results by measuring distances between DARs and the nearest DEG promoters. Additionally, we explore correlations between gene regulation patterns and cell types to identify potential trends linking DAR proximity, gene type, and immune cell identity.
 
-![Graphical Abstract ](graphical_abstract.jpg)
+![Graphical Abstract](graphical_abstract.jpg)
 
 ## Data Analysis Methods
 
-### Data Preparation 
+### Data Preparation
 
-We began our analysis by obtaining the processed differentially accessible regions (DARs) and differentially expressed genes (DEGs) datasets provided by Ramakrishnan et al. (2024). These datasets included chromatin accessibility and gene expression changes identified between Alzheimer's disease (AD) patients and healthy controls (HC) across multiple immune cell types. 
+We began our analysis by obtaining the processed differentially accessible regions (DARs) and differentially expressed genes (DEGs) datasets provided by Ramakrishnan et al. (2024). These datasets included chromatin accessibility and gene expression changes identified between Alzheimer's disease (AD) patients and healthy controls (HC) across multiple immune cell types.
 
-Using the gene names from the DEG dataset, we retrieved the corresponding genomic coordinates to map the genes onto the human genome reference (hg38). We utilized the EnsDb.Hsapiens.v86 library for gene annotations.  
-
+Using the gene names from the DEG dataset, we retrieved the corresponding genomic coordinates to map the genes onto the human genome reference (hg38). We utilized the EnsDb.Hsapiens.v86 library for gene annotations.
 
 ```{r, eval= FALSE}
 # pull out genes from provided processed DEGs
@@ -75,18 +73,19 @@ degs_promoters <- promoters(degs_gr, upstream = 2000, downstream = 500)
 
 ### Data Filtering
 
-In the original study, differential expression analysis was performed using Model-based Analysis of Single-cell Transcriptomics (MAST), a statistical method that models both the probability of expression and the level of expression for each gene in single-cell RNA sequencing data. For identifying DARs from single-cell ATAC-seq data, the authors employed single-cell logistic regression (LR), which models the probability of chromatin accessibility at genomic regions, accommodating the binary nature of ATAC-seq data at single-cell resolution. 
+In the original study, differential expression analysis was performed using Model-based Analysis of Single-cell Transcriptomics (MAST), a statistical method that models both the probability of expression and the level of expression for each gene in single-cell RNA sequencing data. For identifying DARs from single-cell ATAC-seq data, the authors employed single-cell logistic regression (LR), which models the probability of chromatin accessibility at genomic regions, accommodating the binary nature of ATAC-seq data at single-cell resolution.
 
 To ensure that our analysis focused on statistically significant and biologically relevant changes, we applied filtering criteria consistent with those used by Ramakrishnan et al.:
 
-* Adjusted p-value threshold of 0.05: We filtered both DARs and DEGs based on an adjusted p-value (false discovery rate) less than 0.05 to control for multiple testing and reduce the likelihood of false positives.
-* |Log2 fold-change| greater than 0.125: We selected DARs and DEGs with absolute log2 fold changes exceeding 0.125 to focus on changes of practical significance.
+-   Adjusted p-value threshold of 0.05: We filtered both DARs and DEGs based on an adjusted p-value (false discovery rate) less than 0.05 to control for multiple testing and reduce the likelihood of false positives.
+-   \|Log2 fold-change\| greater than 0.125: We selected DARs and DEGs with absolute log2 fold changes exceeding 0.125 to focus on changes of practical significance.
 
 This filtering resulted in a subset of DARs and DEGs with significant changes in chromatin accessibility or gene expression between AD patients and healthy controls.
 
 ### Quantifying Overlaps
 
-We calculated the number of DARs overlapping DEG promoter regions to identify potential regulatory relationships. This step served as a positive control, as accessible chromatin at DEG promoters is expected to correlate with changes in gene expression. 
+We calculated the number of DARs overlapping DEG promoter regions to identify potential regulatory relationships. This step served as a positive control, as accessible chromatin at DEG promoters is expected to correlate with changes in gene expression.
+
 ```{r, eval=FALSE}
 # Calculate overlaps between DARs and DEG promoters
 overlaps <- findOverlaps(dars_gr, degs_promoters)
@@ -96,8 +95,8 @@ overlaps <- findOverlaps(dars_gr, degs_promoters)
 
 Beyond overlap counts, we assessed the spatial relationship between DARs and DEGs by measuring the distance between each DAR and its nearest DEG promoter. This provided a quantitative measure of proximity, allowing us to explore potential regulatory interactions that do not involve direct overlap. We stratified these distances by cell type and gene biotype to identify trends linking DAR proximity, gene type, and immune cell identity.
 
-* Stratification by Cell Type: We analyzed distances within each immune cell type to determine if certain cell types exhibited closer proximity between DARs and DEGs, which could suggest cell type–specific regulatory mechanisms.
-* Stratification by Gene Biotype: We examined distances based on gene biotype (e.g., protein-coding genes, long non-coding RNAs, pseudogenes) to explore whether gene type influences the spatial relationship with DARs.
+-   Stratification by Cell Type: We analyzed distances within each immune cell type to determine if certain cell types exhibited closer proximity between DARs and DEGs, which could suggest cell type--specific regulatory mechanisms.
+-   Stratification by Gene Biotype: We examined distances based on gene biotype (e.g., protein-coding genes, long non-coding RNAs, pseudogenes) to explore whether gene type influences the spatial relationship with DARs.
 
 ```{r, eval=FALSE}
 # Calculate distance to the nearest DEG promoter for each DAR
@@ -105,31 +104,33 @@ dist_to_nearest <- distanceToNearest(dars_gr, degs_promoters)
 ```
 
 ### Correlation Analysis of Log2 Fold Changes
+
 To assess the relationship between changes in chromatin accessibility and gene expression, we calculated the correlation between the log2 fold changes of overlapping DARs and DEGs. A positive correlation would suggest that increases in chromatin accessibility are associated with increases in gene expression, which is consistent with the expectation that open chromatin facilitates transcription.
 
 We used the Pearson correlation coefficient to quantify this relationship, providing a measure of the linear correlation between the two variables.
 
 ### Sign Consistency Analysis
+
 We examined whether the directionality of changes in chromatin accessibility corresponds with changes in gene expression. Specifically, we compared the signs (positive or negative) of the log2 fold changes of overlapping DAR-DEG pairs to determine if they are both upregulated or both downregulated.
 
-* Matching Signs: Both DAR and DEG show increases (positive log2 fold change) or decreases (negative log2 fold change), indicating coordinated regulation.
-* Opposing Signs: DAR and DEG have opposite signs, suggesting more complex regulatory relationships or potential post-transcriptional regulation mechanisms.
+-   Matching Signs: Both DAR and DEG show increases (positive log2 fold change) or decreases (negative log2 fold change), indicating coordinated regulation.
+-   Opposing Signs: DAR and DEG have opposite signs, suggesting more complex regulatory relationships or potential post-transcriptional regulation mechanisms.
 
 This analysis helps identify coordinated regulatory changes and exceptions where chromatin accessibility and gene expression changes do not align.
 
-## Results and Discussion 
+## Results and Discussion
 
-### Summary of Provided Processed Data 
+### Summary of Provided Processed Data
 
-Ramakrishnan et al. identified approximately 140,000 DARs and 75,000 DEGs across multiple immune cell types, representing unique, cell type–specific expression patterns. By applying an adjusted p-value threshold of 0.05 and a log2 fold-change cutoff of > |0.125|, they filtered their dataset to ~9,200 DARs and ~3,400 DEGs. In response, we filtered the dataset with this p-value threshold as well.
+Ramakrishnan et al. identified approximately 140,000 DARs and 75,000 DEGs across multiple immune cell types, representing unique, cell type--specific expression patterns. By applying an adjusted p-value threshold of 0.05 and a log2 fold-change cutoff of \> \|0.125\|, they filtered their dataset to \~9,200 DARs and \~3,400 DEGs. In response, we filtered the dataset with this p-value threshold as well.
 
-![Overview plots of Logc2FC of DARs and DEGs after filtering for adjusted p-value and Log2FC ](figures/log2fc_dars_degs_as_downloaded_data.png)
+![Overview plots of Logc2FC of DARs and DEGs after filtering for adjusted p-value and Log2FC](figures/log2fc_dars_degs_as_downloaded_data.png)
 
 ### Distance Analysis
 
-#### Comparison to Paper Results 
+#### Comparison to Paper Results
 
-Briefly summarizing the data as provided by the paper, we can see the authors identified 68 overlaps with DARs and DEGs, with monocytes having the highest number among the cell types. 
+Briefly summarizing the data as provided by the paper, we can see the authors identified 68 overlaps with DARs and DEGs, with monocytes having the highest number among the cell types.
 
 ```{r, echo=FALSE}
 ## read in data 
@@ -175,7 +176,7 @@ summary_overlaps %>%
     col.names = c("Cell Type", "DAR-DEG Overlap", "Count"))
 ```
 
-Looking at our data, we identified 158 overlaps between DEGs and DARs, with CD 8+ T Cells having the highest. Provided that the data as downloaded did not have the ranges of the genes, it is possible that the difference is due to how we handled our promoter regions which accounts for the difference between our results and the paper results. 
+Looking at our data, we identified 158 overlaps between DEGs and DARs, with CD 8+ T Cells having the highest. Provided that the data as downloaded did not have coordinates of the genes used for identifying overlaps, it is possible that the difference is due to how we handled promoter regions.
 
 ```{r, echo=FALSE}
 dars_with_distances_and_metadata <- read.csv("working_data/dars_with_distances_and_metadata.csv")
@@ -185,7 +186,8 @@ cell_type_overlaps %>%
   kable(caption = "Counts of DAR-DEG Overlaps by Cell Type",
     col.names = c("Cell Type", "DAR-DEG Overlap", "Count"))
 ```
-Ramakrishnan et al. provide TRUE/FALSE as the read out for DAR and DEG overlap. To compare out calculated distances to their results, we look at how often our calculated value of 0 matches their value of 'True'. We find that while the results are not, we confirmed use of the same reference genome (hg38) for annotating genes
+
+Ramakrishnan et al. provide TRUE/FALSE as the read out for DAR and DEG overlap. To compare out calculated distances to their results, we look at how often our calculated value of 0 matches their value of 'True'. We find that while the results are not consistent, we confirmed use of the same reference genome (hg38) for annotating genes
 
 ```{r, echo = FALSE}
 read.csv("figures/distance_overlap_check.csv") %>%
@@ -196,12 +198,11 @@ One additional comparison is to look at how often the DAR is overlapping more th
 
 ![Frequency of number of DEGs overlapping a a single DAR](figures/hist_freq_num_overlaps_per_DAR_DEG.png)
 
-One additional thought, while this considers DAR and DEG overlap, perhaps the initial overlap comparison would make more sense if done between DARs and all genes, as opposed to only differentially expressed genes. The processed data as provided by the authors includes only the log2FC values between disease/healthy individuals, so we are unable to explore expression of all genes. 
-
+One additional thought, while this considers DAR and DEG overlap, perhaps the initial overlap comparison would make more sense if done between DARs and all genes, as opposed to only differentially expressed genes. The processed data as provided by the authors includes only the log2FC values between disease/healthy individuals, so we are unable to explore expression of all genes.
 
 #### Stratified by Cell Type
 
-To assess whether the relationship between DARs and DEGs varies by immune cell type, we analyzed the distances between DARs and their nearest DEGs, stratified by cell type. Our results indicate that cell type does not appear to influence these distances—the distances were relatively consistent across all immune cell types. This suggests that regulatory elements (DARs) are equally distant from their associated genes across different cell types.
+To assess whether the relationship between DARs and DEGs varies by immune cell type, we analyzed the distances between DARs and their nearest DEGs, stratified by cell type. Our results indicate that cell type does not appear to influence these distances---the distances were relatively consistent across all immune cell types. This suggests that regulatory elements (DARs) are equally distant from their associated genes across different cell types.
 
 ![Distance to Nearest DEG by Cell Type](figures/dist_by_celltype_plot.png)
 
@@ -211,22 +212,15 @@ Next, we examined the distances between DARs and DEGs stratified by gene biotype
 
 ![Distance to Nearest DEG by Gene Biotype](figures/dist_by_biotype_plot.png)
 
-
-```{r, echo = FALSE}
-read.csv("figures/distance_less100_overlap_check.csv") %>%
-  kable(caption = "Distance Overlap of <100 bp Compared to Published Overlap")
-```
-
-
 ### Correlations between DAR and DEG Log2FC
 
-To assess whether DARs and DEGs exhibit correlated transcriptional and chromatin accessibility changes, we calculated the correlation between their log2 fold-changes. The correlation coefficient was 0.055, indicating no strong linear relationship between DAR and DEG activity. Literature suggests that these should be more highly correlated, so this result is surprising to us. We aren't quite sure why the correlation is so low. 
+To assess whether DARs and DEGs exhibit correlated transcriptional and chromatin accessibility changes, we calculated the correlation between their log2 fold-changes. The correlation coefficient was 0.055, indicating no strong linear relationship between DAR and DEG activity. Literature suggests that these should be more highly correlated, so this result is surprising to us. We aren't quite sure why the correlation is so low.
 
 ### Accessibility and Expression Sign Consistency
 
-We examined whether DAR and DEG log2 fold-changes share the same sign (i.e., both upregulated or both downregulated). While sign consistency was not universal, a  portion of DAR-DEG pairs demonstrated matching signs, suggesting coordinated regulatory changes in certain cases. In general, increased chromatin accessibility is associated with higher gene expression, as open chromatin provides easier access for transcriptional machinery. However, this relationship is not absolute. Transcription factors (TFs) and other regulatory proteins can modulate gene expression independently of accessibility, with some TFs repressing transcription even in accessible regions, or activating transcription by binding to closed chromatin regions and promoting chromatin remodeling.
+We examined whether DAR and DEG log2 fold-changes share the same sign (i.e., both upregulated or both downregulated). While sign consistency was not universal, a portion of DAR-DEG pairs demonstrated matching signs, suggesting coordinated regulatory changes in certain cases. In general, increased chromatin accessibility is associated with higher gene expression, as open chromatin provides easier access for transcriptional machinery. However, this relationship is not absolute. Transcription factors (TFs) and other regulatory proteins can modulate gene expression independently of accessibility, with some TFs repressing transcription even in accessible regions, or activating transcription by binding to closed chromatin regions and promoting chromatin remodeling.
 
-![](figures/sign_match_plot.png)
+![](figures/sign_match_plot.png){width=300px}
 
 ```{r}
 read.csv("figures/sign_table.csv") %>%
