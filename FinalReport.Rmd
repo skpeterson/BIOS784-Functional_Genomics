@@ -1,5 +1,5 @@
 ---
-title: "Peaking into Single Cell Epigenetics"
+title: "Peaking into Multiomics"
 author: "Annika Cleven, Sara Peterson, Hazel Milla, Yishu Zhang"
 date: "2024-12-04"
 output:
@@ -226,3 +226,11 @@ We examined whether DAR and DEG log2 fold-changes share the same sign (i.e., bot
 read.csv("figures/sign_table.csv") %>%
   kable(caption = "Signs of the Log 2 FC")
 ```
+
+# Conclusions and Next Steps
+
+This study employed single-cell ATAC-seq (scATAC-seq) and single-cell RNA-seq (scRNA-seq) to investigate transcriptional and chromatin accessibility changes in the peripheral immune system of Alzheimer's disease (AD) patients compared to healthy controls (HC).
+
+Using R packages including GenomicRanges, dplyr, and ggplot2, we identified 158 overlaps between differentially expressed genes (DEGs) and differentially accessible regions (DARs), with CD8+ T cells showing the highest overlap. In contrast, the original study reported 68 overlaps, predominantly in monocytes. We observed minimal differences in DEG-DAR overlap by immune cell type and minor variations by DEG biotype. A modest correlation between chromatin accessibility and gene expression was consistent with prior studies, reflecting the interplay between regulatory elements and transcription.
+
+To address discrepancies with the original study, our next step would be to run the code provided by the authors in their public git repo to identify sources of divergence in the analyses. Additionally, as single cell epigenetics becomes more common, developing a standardized data processing pipeline for single-nucleus multiomic data could improve reproducibility and concordance. 
